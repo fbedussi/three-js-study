@@ -48,12 +48,15 @@ loader.load(
 );
 
 // PAGE LINK - IMAGE
-const texture = new THREE.TextureLoader().load('https://picsum.photos/id/237/200/300');
+const texture = new THREE.TextureLoader().load('https://picsum.photos/seed/picsum/200/300');
 const geometry = new THREE.PlaneGeometry(10, 10);
 const material = new THREE.MeshBasicMaterial({map: texture});
+material.side = THREE.DoubleSide
 const pageLink = new THREE.Group();
 const pageImage = new THREE.Mesh(geometry, material);
 pageLink.add(pageImage)
+pageLink.rotation.y = Math.PI
+
 scene.add(pageLink);
 
 // PAGE LINK - TEXT
@@ -71,8 +74,10 @@ fontLoader.load('fonts/helvetiker_regular.typeface.json', function (font) {
   const shapes = font.generateShapes(message, 1);
   const geometry = new THREE.ShapeGeometry(shapes);
   const text = new THREE.Mesh(geometry, matLite);
+  text.position.z = 0.005
   pageLink.add(text);
 });
+
 
 
 class PickHelper {
@@ -126,31 +131,58 @@ window.addEventListener('mouseup', clearPickPosition);
 
 let isClicked = false
 let prevClientX = 0
-let angle = 0
+let currentDeltaAngle = 0
+let angle = 0 - (Math.PI /2)
+
+function moveCard(card, angle) {
+  card.position.x = 10 * Math.cos(angle);
+  card.position.z = 10 * Math.sin(angle);
+  card.position.y = 6 * Math.sin(angle);
+  pageLink.rotation.y = 0 - angle + (Math.PI /2)
+}
+
+moveCard(pageLink, angle)
+
+function slowDown(velocity) {
+  angle -= velocity
+  rotateObjects()
+
+  if (Math.abs(velocity) > 0.01) {
+    requestAnimationFrame(() => {
+      slowDown(velocity *= 0.9)
+    })
+ 
+  }
+}
+
 window.addEventListener('mousedown', function (event) {
   isClicked = true
   prevClientX = event.clientX
 });
 window.addEventListener('mouseup', function () {
   isClicked = false
+  console.log('currentDeltaAngle', currentDeltaAngle)
+  slowDown(currentDeltaAngle)
 });
 
-const mouseSensibility = 2
-function rotateObjects(event) {
-  if (isClicked) {
-    angle -= (event.clientX - prevClientX) / window.innerWidth * mouseSensibility;
-    prevClientX = event.clientX
-    console.log('angle', angle)
-    pageLink.position.x = 10 * Math.cos(angle) + 0;
-    pageLink.position.z = 10 * Math.sin(angle) + 0;
-    pageLink.rotation.y = angle / Math.PI
-
-    if (car) {
-      car.rotation.y -= 0.0005;
-    }
+function rotateObjects() {
+  moveCard(pageLink, angle)
+    
+  if (car) {
+    car.rotation.y -= 0.0005;
   }
 }
-window.addEventListener('mousemove', rotateObjects);
+
+const mouseSensibility = 2
+function onMouseMove(event) {
+  if (isClicked) {
+    currentDeltaAngle = (event.clientX - prevClientX) / window.innerWidth * mouseSensibility
+    angle = (angle - currentDeltaAngle);
+    prevClientX = event.clientX
+    rotateObjects()
+  }
+}
+window.addEventListener('mousemove', onMouseMove);
 
 
 function render() {
